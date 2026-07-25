@@ -143,6 +143,11 @@ export async function loginUser(req, res) {
         })
     }
     else{
+
+        if(user.isBlocked){
+                return res.status(401).json({message:"Account banned"})
+            }
+
         const isValid=bcrypt.compareSync(req.body.password,user.password)
         if (isValid){
             
@@ -214,6 +219,7 @@ export async function updateUser(req,res) {
 
             const updatedUser= await User.findOne({email:req.user.email})
             
+
             const payload={
             email:updatedUser.email,
             firstname:updatedUser.firstname,
@@ -349,5 +355,65 @@ export async function verifyOTPandResetPassword(req,res) {
 
     }catch(error){
         return res.status(500).json({message:"somthing went wrong"})
+    }
+}
+
+export async function blockuser(req,res) {
+    const toblock = req.body.email
+
+    try{
+        if(!isAdmin(req)){
+            return res.status(401).json({message:"Unauthorized"})
+        }
+
+        const updated=await User.findOneAndUpdate({email:toblock},{
+            isBlocked:true
+        })
+
+        if(updated==null){
+            return res.status(404).json({message:"Not found"})
+        }
+        return res.status(200).json({message:"User blocked successfully"})
+
+    }catch(error){
+        return res.status(500).json({message:"Error blocking user"})
+    }
+}
+
+
+
+export async function unblockuser(req,res) {
+    const tounblock = req.body.email
+
+    try{
+        if(!req.user.isAdmin){
+            return res.status(401).json({message:"Unauthorized"})
+        }
+
+        const updated=await User.findOneAndUpdate({email:tounblock},{
+            isBlocked:false
+        })
+
+        if(updated==null){
+            return res.status(404).json({message:"Not found"})
+        }
+        return res.status(200).json({message:"User unblocked successfully"})
+
+    }catch(error){
+        return res.status(500).json({message:"Error unblocking user"})
+    }
+}
+
+export async function getUsers(req,res) {
+    if(!isAdmin(req)){
+        return res.status(401).json({message:"Unauthorized"})
+    }
+
+    try {
+        const users = await User.find().select('-password')
+        return res.json(users)
+
+    }catch(error){
+         return res.status(500).json({message:"Error fetching users"})
     }
 }
